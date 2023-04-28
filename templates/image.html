@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+ <title>Images</title>
+ <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
+</head>
+<body>
+<h1> Images </h1>
+<table>
+ <tr>
+ <td> Изображение static </td>
+ <td> Изображение из буфера </td>
+ </tr>
+30
+ <tr>
+ <td> <img src = "{{ im_st }}"/> </td>
+ <td> <img src = "{{ im_dyn }}"/> </td>
+ </tr>
+</table>
+</body>
+</html>
