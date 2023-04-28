@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+ <title>Title</title>
+</head>
+<body>
+<h2>Форма ввода данных для изображений</h2>
+ <form action="image_form" enctype="multipart/form-data" method="post">
+ <p>
+ Имя операции <br>
+ <input name="name_op" value="operation" />
+ </p>
+ <p>
+ Введите число <br>
+ <input name="number_op" type="number" value = "0" />
+ </p>
+ <table>
+37
+ <tr>
+ <td><input type="range" id="r" name="r" value="123" oninput="x1.value=r.value" min="0" max="255" > </td>
+ <td><output name="x1" for="r"> 123 </output></td>
+ </tr>
+ <tr>
+ <td><input type="range" id="g" name="g" value="123" oninput="x2.value=g.value" min="0" max="255" > </td>
+ <td><output name="x2" for="g"> 123 </output></td>
+ </tr>
+ <tr>
+ <td><input type="range" id="b" name="b" value="123" oninput="x3.value=b.value" min="0" max="255" > </td>
+ <td><output name="x3" for="b"> 123 </output></td>
+ </tr>
+ </table>
+ <input name="files" type="file" multiple>
+ <p>
+ <input type="submit" value="Send" />
+ </p>
+ </form>
+{% if ready %}
+<table>
+{% for image in images %}
+<tr>
+ <td>
+ <img src = "{{ image }}">
+ </td>
+</tr>
+38
+{% endfor %}
+</table>
+{% endif %}
+</body>
+</html>
