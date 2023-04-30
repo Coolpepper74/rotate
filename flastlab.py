@@ -9,7 +9,8 @@ from fastapi.templating import Jinja2Templates
 from typing import List
 import hashlib
 import uvicorn
-import pydantic
+import numpy as np
+from pydantic import BaseModel
 
 app = FastAPI()
 # Hello World route
@@ -100,6 +101,51 @@ async def make_image(request: Request,
 @app.get("/image_form", response_class=HTMLResponse)
 async def make_image(request: Request):
     return templates.TemplateResponse("forms.html", {"request": request})
+
+class User(BaseModel):
+    name: str
+    age: int
+@app.get('/users/{user_id}')
+def get_user(user_id):
+    return User(name="Joe Biden", age=80)
+@app.put('/users/{user_id}')
+def update_user(user_id, user: User):
+# поместите сюда код для обновления данных
+    return user
+
+@app.post("/rotate", response_class=HTMLResponse)
+async def rotate_image(request: Request,
+    a:int = Form(),
+    files: List[UploadFile] = File(description="Multiple files as UploadFile")
+ ):
+    ready = False
+    print(len(files))
+    if(len(files)>0):
+        if(len(files[0].filename)>0):
+            ready = True
+    images = []
+    if ready:
+        print([file.filename.encode('utf-8') for file in files])
+        # преобразуем имена файлов в хеш -строку
+        images = ["static/"+hashlib.sha256(file.filename.encode('utf-8')).hexdigest() for file in files]
+        # берем содержимое файлов
+        content = [await file.read() for file in files]
+        # создаем объекты Image типа RGB размером 200 на 200
+        p_images = [Image.open(io.BytesIO(con)).convert("RGB").resize((200,200)) for con in content]
+        #o_array = [np.array(p_images)]
+        for i in range(len(p_images)):
+            p_images[i] = p_images[i].rotate(a)
+            p_images[i].save("./"+images[i],'JPEG')
+        #p_array = [np.array(p_images)]
+
+
+        # возвращаем html с параметрами-ссылками на изображения, которые позже будут
+        # извлечены браузером запросами get по указанным ссылкам в img src
+    return templates.TemplateResponse("rotate.html", {"request": request, "ready": ready, "images": images})
+
+@app.get("/rotate", response_class=HTMLResponse)
+async def rotate_image(request: Request):
+    return templates.TemplateResponse("rotate.html", {"request": request})
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=5000)
