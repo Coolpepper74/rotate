@@ -3,6 +3,13 @@
 <head>
  <meta charset="UTF-8">
  <title>Title</title>
+    <script src="https://www.google.com/recaptcha/api.js" async defer> </script>
+    <script>
+        var corrCapt = function (response) {
+        document.getElementsByName('capt')[0].value = response;
+        // document.forms[0].submit()
+        }
+    </script>
 </head>
 <body>
 <h2>Форма ввода данных для изображений</h2>
@@ -15,6 +22,8 @@
  </table>
  <input name="files" type="file" multiple>
  <p>
+  <input type="hidden" name="capt" value="1">
+  <div class="g-recaptcha" data-sitekey="6LdD6wEmAAAAACXb3ZSKzp6iG7S8JUHYRdHQ3IWx" data-callback="corrCapt"></div>
  <input type="submit" value="Send" />
  </p>
  </form>

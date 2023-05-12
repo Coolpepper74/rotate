@@ -1,8 +1,10 @@
 import fastapi.responses
 import numpy
 import io
+import requests
 from PIL import Image, ImageDraw
-from fastapi import FastAPI, Request, UploadFile, Form, File
+from matplotlib import pyplot as plt
+from fastapi import FastAPI, Request, UploadFile, Form, File, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -11,6 +13,7 @@ import hashlib
 import uvicorn
 import numpy as np
 from pydantic import BaseModel
+from googleapiclient.errors import HttpError
 
 app = FastAPI()
 # Hello World route
@@ -113,35 +116,76 @@ def update_user(user_id, user: User):
 # поместите сюда код для обновления данных
     return user
 
+def hist(list, last_name, n):
+    r, g, b = list[:, :, 0], list[:, :, 1], list[:, :, 2]
+    print(r, g, b)
+    plt.hist(r.flatten(), bins=256, color='red', alpha=0.5)
+    plt.hist(g.flatten(), bins=256, color='green', alpha=0.5)
+    plt.hist(b.flatten(), bins=256, color='blue', alpha=0.5)
+    # plt.show()
+    plt.savefig(f"static/plot{n}.png")
+    img = Image.fromarray(list)
+    plt.imshow(img)
+    img.save("./" + last_name + ".jpeg", 'JPEG')
+    plt.clf()
+    return
+
 @app.post("/rotate", response_class=HTMLResponse)
 async def rotate_image(request: Request,
+    capt: str = Form(),
     a:int = Form(),
-    files: List[UploadFile] = File(description="Multiple files as UploadFile")
+    files: List[UploadFile] = File(description='Multiple files as UploadFile')
  ):
+    recaptcha_response = capt
+    print(recaptcha_response)
+    try:
+        if not recaptcha_response:
+            return HTMLResponse('<h1>reCAPTCHA verification failed</h1>')
+        response = requests.post(
+            'https://www.google.com/recaptcha/api/siteverify',
+            data={
+                'secret': '6LdD6wEmAAAAAHqrZC_aAjmEIxZTsbQJgm78350J',
+                'response': recaptcha_response,
+            },
+        )
+        if not response.json().get('success'):
+            return HTMLResponse('<h1>reCAPTCHA verification failed</h1>')
+    except HttpError as e:
+            raise HTTPException(status_code=500, detail=str(e))
     ready = False
     print(len(files))
     if(len(files)>0):
         if(len(files[0].filename)>0):
             ready = True
-    images = []
     if ready:
         print([file.filename.encode('utf-8') for file in files])
         # преобразуем имена файлов в хеш -строку
         images = ["static/"+hashlib.sha256(file.filename.encode('utf-8')).hexdigest() for file in files]
         # берем содержимое файлов
+        last_name = "static/" + hashlib.sha256(
+            files[0].filename.encode('utf8')).hexdigest()
         content = [await file.read() for file in files]
         # создаем объекты Image типа RGB размером 200 на 200
         p_images = [Image.open(io.BytesIO(con)).convert("RGB").resize((200,200)) for con in content]
-        #o_array = [np.array(p_images)]
+        o_list = []
+        p_list = []
+        for i in range(len(p_images)):
+            o_array = np.array(p_images[i])
+            o_list.append(o_array)
         for i in range(len(p_images)):
             p_images[i] = p_images[i].rotate(a)
             p_images[i].save("./"+images[i],'JPEG')
-        #p_array = [np.array(p_images)]
+        for i in range(len(p_images)):
+            p_array = np.array(p_images[i])
+            p_list.append(p_array)
+        hist(o_list[0], last_name, 1)
+        hist(p_list[0], last_name, 2)
+        rets = [f"{last_name}.jpeg", 'static/plot1.png', 'static/plot2.png']
 
 
         # возвращаем html с параметрами-ссылками на изображения, которые позже будут
         # извлечены браузером запросами get по указанным ссылкам в img src
-    return templates.TemplateResponse("rotate.html", {"request": request, "ready": ready, "images": images})
+    return templates.TemplateResponse("rotate.html", {"request": request, "ready": ready, "images": rets})
 
 @app.get("/rotate", response_class=HTMLResponse)
 async def rotate_image(request: Request):
